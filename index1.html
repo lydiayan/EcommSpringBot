@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单与聊天界面</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f5f7;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .left-panel {
+            width: 70%;
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+        }
+        .right-panel {
+            width: 30%;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background-color: #f9f9f9;
+        }
+        .order-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .order-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .order-item:hover {
+            background-color: #f0f0f0;
+        }
+        .order-item.active {
+            background-color: #e6f7ff;
+            border-right: 3px solid #1890ff;
+        }
+        .order-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap; /* 在小屏幕上换行 */
+        }
+        .order-summary p {
+            margin: 5px 15px 5px 0; /* 调整右边距以增加间距 */
+            color: #333;
+
+        }
+        .order-details {
+            margin-top: 15px;
+            padding-left: 10px;
+            border-left: 2px solid #1890ff;
+            font-size: 0.9em;
+            color: #555;
+        }
+        .order-details p {
+            margin: 5px 0;
+        }
+        .status-icon {
+            font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+            font-size: 1.2em;
+        }
+        .chat-box {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-input-area {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #e0e0e0;
+            background-color: #fff;
+        }
+        .chat-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 18px;
+            outline: none;
+        }
+        .send-button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .send-button:hover {
+            background-color: #0056b3;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 18px;
+            max-width: 75%;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+        .my-message {
+            background-color: #dcf8c6;
+            align-self: flex-end;
+        }
+        .other-message {
+            background-color: #fff;
+            border: 1px solid #eee;
+            align-self: flex-start;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="left-panel">
+        <ul id="order-list" class="order-list">
+            <!-- Orders will be loaded here -->
+        </ul>
+    </div>
+    <div class="right-panel">
+        <div id="chat-box" class="chat-box">
+            <div class="message other-message">您好！请问有什么可以帮助您的吗？</div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" class="chat-input" placeholder="输入消息...">
+            <button id="send-button" class="send-button">发送</button>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    function loadOrders() {
+        const orderList = document.getElementById('order-list');
+        fetch('http://127.0.0.1:8081/orders/list')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应失败: ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(orders => {
+                orderList.innerHTML = ''; // 清空原有列表
+                orders.forEach(order => {
+                    const item = document.createElement('li');
+                    item.className = 'order-item';
+                    item.dataset.orderId = order.orderId;
+
+                    const statusMap = {
+                        0: { text: '待付款', icon: '⏳' },
+                        1: { text: '已付款', icon: '💰' },
+                        2: { text: '已发货', icon: '🚚' },
+                        3: { text: '已完成', icon: '✅' },
+                        4: { text: '已取消', icon: '❌' }
+                    };
+
+                    item.innerHTML = `
+                        <div class="order-summary">
+                            <p><strong>订单ID:</strong> ${order.orderId}</p>
+                            <p><strong>用户ID:</strong> ${order.userId}</p>
+                            <p><strong>价格:</strong> ¥${order.totalAmount.toFixed(2)}</p>
+                            <p><strong>状态:</strong> <span class="status-icon">${statusMap[order.orderStatus]?.icon || ''} </span> ${statusMap[order.orderStatus]?.text || '未知'}</p>
+                        </div>
+                        <div class="order-details" style="display: none;">
+                            <p><strong>下单时间:</strong> ${new Date(order.orderTime).toLocaleString()}</p>
+                            <p><strong>支付方式:</strong> ${order.paymentMethod}</p>
+                            <p><strong>收货地址:</strong> ${order.shippingAddress}</p>
+                            <p><strong>联系电话:</strong> ${order.contactPhone}</p>
+                            <p><strong>订单详情:</strong></p>
+                            <ul>
+                                ${order.orderDetails.map(detail => `<li>${detail.productName} (${detail.specification}) x ${detail.quantity} - ¥${detail.unitPrice.toFixed(2)}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                    orderList.appendChild(item);
+                });
+            })
+            .catch(error => {
+                orderList.innerHTML = '<li>加载订单失败。</li>';
+                console.error('获取订单数据时发生错误:', error);
+            });
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        const orderList = document.getElementById('order-list');
+        const chatBox = document.getElementById('chat-box');
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('send-button');
+
+        // Fetch and display orders
+        fetch('http://127.0.0.1:8081/orders/list')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应失败: ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(orders => {
+                orderList.innerHTML = ''; // Clear loading state
+                orders.forEach(order => {
+                    const item = document.createElement('li');
+                    item.className = 'order-item';
+                    item.dataset.orderId = order.orderId;
+
+                    const statusMap = {
+                        0: '待付款',
+                        1: '已付款',
+                        2: '已发货',
+                        3: '已完成',
+                        4: '已取消'
+                    };
+
+                    item.innerHTML = `
+                            <div class="order-summary">
+                                <p><strong>订单ID:</strong> ${order.orderId}</p>
+                                <p><strong>用户ID:</strong> ${order.userId}</p>
+                                <p><strong>价格:</strong> ¥${order.totalAmount.toFixed(2)}</p>
+                                <p><strong>状态:</strong> ${statusMap[order.orderStatus] || '未知'}</p>
+                            </div>
+                            <div class="order-details" style="display: none;">
+                                <p><strong>下单时间:</strong> ${new Date(order.orderTime).toLocaleString()}</p>
+                                <p><strong>支付方式:</strong> ${order.paymentMethod}</p>
+                                <p><strong>收货地址:</strong> ${order.shippingAddress}</p>
+                                <p><strong>联系电话:</strong> ${order.contactPhone}</p>
+                                <p><strong>订单详情:</strong></p>
+                                <ul>
+                                    ${order.orderDetails.map(detail => `<li>${detail.productName} (${detail.specification}) x ${detail.quantity} - ¥${detail.unitPrice.toFixed(2)}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    orderList.appendChild(item);
+                });
+            })
+            .catch(error => {
+                orderList.innerHTML = '<li>加载订单失败。请检查您的后端服务是否正在运行，并确认已正确配置CORS跨域请求策略。</li>';
+                console.error('获取订单数据时发生错误:', error);
+            });
+
+        // Toggle order details visibility and active state
+        orderList.addEventListener('click', function(e) {
+            const clickedItem = e.target.closest('.order-item');
+            if (clickedItem) {
+                // Remove active class from all items
+                document.querySelectorAll('.order-item').forEach(el => {
+                    if (el !== clickedItem) {
+                        el.classList.remove('active');
+                        const details = el.querySelector('.order-details');
+                        if (details) details.style.display = 'none';
+                    }
+                });
+
+                // Toggle active class on the clicked item
+                clickedItem.classList.toggle('active');
+
+                // Toggle display of details for the clicked item
+                const details = clickedItem.querySelector('.order-details');
+                if (details) {
+                    details.style.display = clickedItem.classList.contains('active') ? 'block' : 'none';
+                }
+            }
+        });
+
+        // Function to send a chat message
+        // Function to send a chat message
+        function sendMessage() {
+            const messageText = chatInput.value.trim();
+            if (messageText) {
+                // Display user's message
+                const userMessageElement = document.createElement('div');
+                userMessageElement.className = 'message my-message';
+                userMessageElement.textContent = messageText;
+                chatBox.appendChild(userMessageElement);
+                chatInput.value = '';
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                // Call agent API
+                fetch(`http://127.0.0.1:8888/agent/chat?message=${encodeURIComponent(messageText)}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('代理服务响应失败');
+                        }
+                        return response.text(); // Assuming plain text response
+                    })
+                    .then(agentReply => {
+                        // Display agent's response
+                        const agentMessageElement = document.createElement('div');
+                        agentMessageElement.className = 'message other-message';
+                        agentMessageElement.textContent = agentReply;
+                        chatBox.appendChild(agentMessageElement);
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    })
+                    .catch(error => {
+                        console.error('调用代理API时出错:', error);
+                        const errorMessageElement = document.createElement('div');
+                        errorMessageElement.className = 'message other-message';
+                        errorMessageElement.style.color = 'red';
+                        errorMessageElement.textContent = '无法连接到代理服务。';
+                        chatBox.appendChild(errorMessageElement);
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    });
+            }
+        }
+
+        // Event listeners for sending a message
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
