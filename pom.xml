@@ -14,6 +14,9 @@
     <packaging>pom</packaging>
     <name>EcommSpringBot</name>
     <description>EcommSpringBot</description>
+    <modules>
+        <module>mall-order-graph-server</module>
+    </modules>
 
     <properties>
         <!-- Project revision -->

@@ -28,26 +28,30 @@ EcommSpringBot/
 ├── mall-order-es-rag/          # 向量知识库模块（退换货规则文档 → ES 向量）
 └── README.md
 
-⚙️ 模块说明
 
-1. mall-order
-   •	Spring Boot 编写的基础订单服务
-   •	提供订单查询、取消等接口
-   •	连接 MySQL，数据表设计合理
+📌 功能特性
 
-2. mall-order-cmp-server
-   •	将订单能力封装成 CMP Server，可供多智能体复用
-   •	提供中台统一鉴权、日志、调用封装
+✅ 1. 自然语言操作订单服务
+•	用户可使用自然语言对话，如：
+•	“我想查询 用户USER1005 的订单”
+•	“帮我取消用户USER1005 的订单”
 
-3. mall-order-cmp_sse-client
-   •	SSO 登录，支持前端用户身份识别
-   •	暴露聊天 Assistant API，基于 SpringAI 调用大模型
-   •	连接 Redis 实现对话历史持久化（上下文保持）
+通过 Spring Ai Alibaba Function Calling 自动匹配接口并调用 mall-order 服务完成。
 
-4. mall-order-es-rag
-   •	使用企业规则文档生成 embedding
-   •	存入 Elasticsearch，支持余弦相似度检索
-   •	构建私有化知识问答能力
+⸻
+
+✅ 2. SSE 实时回复 + Redis 上下文记忆
+•	使用 SSE（Server-Sent Events）建立流式连接
+•	基于 Redis 实现用户对话上下文记忆
+•	支持连续上下文查询、简洁自然的人机交互体验
+
+⸻
+
+✅ 3. 向量检索增强（RAG）+ ES
+•	退换货规则、发票须知等内容整理后构建知识库，提供动态修改知识库内容
+•	使用 text-embedding-v1 模型生成向量，存入 Elasticsearch
+•	用户提问如“我的商品退货时间是多久？”可自动语义匹配文档内容并回答
+
 
 🚀 快速启动
 
@@ -72,23 +76,7 @@ cd ../mall-order-cmp_sso-client && mvn spring-boot:run
 # 启动 es-rag 服务（用于知识库管理）
 cd ../mall-order-es-rag && mvn spring-boot:run
 
-📖 示例功能
-
-查询订单
-
-用户输入：我想查一下我的订单
-➡ 系统提取用户身份 ➡ 调用 mall-order 接口 ➡ 返回订单列表
-
-取消订单
-
-用户输入：帮我取消订单 12345
-➡ 系统识别订单号 ➡ 发起取消调用 ➡ 返回取消成功提示
-
-企业规则问答
-
-用户输入：退货流程是怎样的？
-➡ 向量检索规则文档 ➡ 提供准确回答
-
+📖
 📄 LICENSE
 
 本项目基于 Apache 2.0 License 开源，可自由使用、修改与分发。

@@ -8,7 +8,7 @@
         <version>${revision}</version>
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>mall-order-cmp_sso-client</artifactId>
+    <artifactId>mall-order-cmp_sse-client</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>mall-order-cmp_sso-client</name>
     <description>mall-order-cmp_sso-client</description>
